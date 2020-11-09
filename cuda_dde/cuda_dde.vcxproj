@@ -143,7 +143,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cudadft.cpp" />
+    <CudaCompile Include="cudadft.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="maindde.cpp" />
   </ItemGroup>

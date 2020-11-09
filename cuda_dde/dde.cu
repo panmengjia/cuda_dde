@@ -1,13 +1,8 @@
 //
 // CUDA implementation of Laplacian Filter
 //
-#include "opencv2/opencv.hpp"
-#include <opencv2/highgui.hpp>
-#include <iostream>
-#include <string>
-#include <stdio.h>
-#include <cuda.h>
-#include "cuda_runtime.h"
+
+#include "main.h"
 //#include <qdebug.h>
 
 #define BLOCK_SIZE      8
