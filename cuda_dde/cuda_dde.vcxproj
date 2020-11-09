@@ -143,12 +143,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cudadft.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="maindde.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="dde.cu">
       <FileType>Document</FileType>
     </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="main.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
