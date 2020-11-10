@@ -21,7 +21,7 @@ void mainfft()
     for (i = 0; i < LENGTH; i++)
     {
         CompData[i].x = Data[i];
-        CompData[i].y = 0;
+        CompData[i].y = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
     }
 
     cufftComplex* d_fftData;

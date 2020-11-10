@@ -3,10 +3,11 @@
 
 int main(int argc,char** argv)
 {
-	double time = (double)getTickCount();
-	mainfft();
-	time = (getTickCount() - time)*1000 / getTickFrequency();
-	cout << "time = " << time <<"ms"<< endl;
+	//double time = (double)getTickCount();
+	//mainfft();
+	//time = (getTickCount() - time)*1000 / getTickFrequency();
+	//cout << "time = " << time <<"ms"<< endl;
+	fft1d();
 
 	return 0;
 }
