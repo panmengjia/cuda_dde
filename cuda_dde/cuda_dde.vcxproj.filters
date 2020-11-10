@@ -29,6 +29,9 @@
     <CudaCompile Include="cudadft.cu">
       <Filter>源文件</Filter>
     </CudaCompile>
+    <CudaCompile Include="fftTest.cu">
+      <Filter>源文件</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
