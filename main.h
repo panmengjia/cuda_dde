@@ -16,6 +16,7 @@ using namespace std;
 
 
 extern int opencvdft(int argc, const char ** argv);
+extern void mainfftQT1();
 
 
 
