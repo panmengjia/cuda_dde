@@ -148,6 +148,7 @@
     </CudaCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="maindde.cpp" />
+    <CudaCompile Include="fft1.cu" />
     <CudaCompile Include="fftTest.cu" />
   </ItemGroup>
   <ItemGroup>

@@ -27,6 +27,7 @@ extern int maindde();
 extern "C" void mainfft();
 extern "C" void fft1d();
 extern "C" void fft3d();
+extern  void fft2main();
 
 
 

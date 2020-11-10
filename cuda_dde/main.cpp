@@ -7,7 +7,13 @@ int main(int argc,char** argv)
 	//mainfft();
 	//time = (getTickCount() - time)*1000 / getTickFrequency();
 	//cout << "time = " << time <<"ms"<< endl;
-	fft3d();
+	
+	//while (1)
+	//{
+	//	fft2main();
+	//}
+
+	maindde();
 
 	return 0;
 }

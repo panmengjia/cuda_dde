@@ -5,7 +5,7 @@
 #include "main.h"
 //#include <qdebug.h>
 
-#define BLOCK_SIZE      8
+#define BLOCK_SIZE      32
 #define FILTER_WIDTH    15
 #define FILTER_HEIGHT   15
 
