@@ -4,15 +4,12 @@
 #include "string"
 
 
-
-
-
-void fftKernel(void* indata,void* outdata,const unsigned int kh,const unsigned int kw)
+void fftKernel(cufftReal* indata,cufftComplex* outdata,const unsigned int kh,const unsigned int kw)
 {
     cufftReal* indata_dev;
     cufftComplex* outdata_dev;
     cudaMalloc((void**)&indata_dev,sizeof(cufftReal)*kh*kw);
-    cudaMalloc((void**)&outdata_dev,sizeof(cufftComplex)*kh*(kw/2+1));
+    cudaMalloc((void**)&outdata_dev,sizeof(cufftComplex)*kh*kw); //(kw/2+1)
     cudaMemcpy(indata_dev,indata,sizeof(cufftReal)*kw*kh,cudaMemcpyHostToDevice);
 
     cufftHandle planForward;
@@ -20,14 +17,12 @@ void fftKernel(void* indata,void* outdata,const unsigned int kh,const unsigned i
     cufftExecR2C(planForward,indata_dev,outdata_dev);
     cudaThreadSynchronize();
 
-    cudaMemcpy(outdata,outdata_dev,sizeof(cufftReal)*kh*kw,cudaMemcpyDeviceToHost);
+    cudaMemcpy(outdata,outdata_dev,sizeof(cufftComplex)*kh*kw,cudaMemcpyDeviceToHost);
 
     cufftDestroy(planForward);
     cudaFree(outdata_dev);
     cudaFree(indata_dev);
 }
-
-
 
 
 void fftQt1(void* indata,void* outdata,const unsigned int heigth,const unsigned int width)
@@ -99,15 +94,25 @@ __global__ void kernel_convfft(cufftComplex* imgdata_dev,cufftComplex* kdata_dev
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if(x< imgw && y < imgh/2 )
+//    if(x< imgw && y < imgh/2 )
+//    {
+//        imgdata_dev[y*imgw + x].x = imgdata_dev[y*imgw + x].x * kdata_dev[y*imgw + x].x;
+//        imgdata_dev[y*imgw + x].y = imgdata_dev[y*imgw + x].y * kdata_dev[y*imgw + x].y;
+//    }
+//    else if(y >= imgh/2 && x <imgw && y <imgh)
+//    {
+//        imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x = imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x * kdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x;
+//        imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y = imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y * kdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y;
+//    }
+    if(x == 0 || y == 0)
     {
-        imgdata_dev[y*imgw + x].x = imgdata_dev[y*imgw + x].x * kdata_dev[y*imgw + x].x;
-        imgdata_dev[y*imgw + x].y = imgdata_dev[y*imgw + x].y * kdata_dev[y*imgw + x].y;
+        imgdata_dev[y*imgw + x].x = imgdata_dev[y*imgw + x].x * kdata_dev[y*imgw + x].x - imgdata_dev[y*imgw + x].y * kdata_dev[y*imgw + x].y;
+        imgdata_dev[y*imgw + x].y = imgdata_dev[y*imgw + x].y * kdata_dev[y*imgw + x].x + imgdata_dev[y*imgw + x].x * kdata_dev[y*imgw + x].y;
     }
-    else if(y >= imgh/2 && x <imgw && y <imgh)
+    else if(y > 0 && x >0 && x < (imgw/2+1))
     {
-        imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x = imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x * kdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x;
-        imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y = imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y * kdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y;
+        imgdata_dev[y*imgw + x].x = imgdata_dev[y*imgw + x].x * kdata_dev[y*imgw + x].x - imgdata_dev[y*imgw + x].y * kdata_dev[y*imgw + x].y;
+        imgdata_dev[y*imgw + x].y = imgdata_dev[y*imgw + x].y * kdata_dev[y*imgw + x].x + imgdata_dev[y*imgw + x].x * kdata_dev[y*imgw + x].y;
     }
 
 }
@@ -118,27 +123,17 @@ cufftComplex* imgdataComplex_dev;
 cufftComplex* kdata_dev;
 cufftHandle planForward,planInverse;
 
-void fftImgKernel(void* imgdata,void* kdata,const unsigned int imgh,const unsigned int imgw)
+void fftImgKernel(cufftReal* imgdata,cufftComplex* kdata,const unsigned int imgh,const unsigned int imgw)
 {
     if(first)
     {
         //img
-
         cudaMalloc((void**)&imgdata_dev,sizeof(cufftReal)*imgh*imgw);
-
-
         //img complex
-
         cudaMalloc((void**)&imgdataComplex_dev,sizeof(cufftComplex)*imgh*imgw);
-
         //kernel
-
         cudaMalloc((void**)&kdata_dev,sizeof(cufftComplex)*imgh*imgw);
-
-
-
         //handle
-
         cufftPlan2d(&planForward,imgh,imgw,CUFFT_R2C);
         cufftPlan2d(&planInverse,imgh,imgw,CUFFT_C2R);
         first =false;
@@ -158,6 +153,7 @@ void fftImgKernel(void* imgdata,void* kdata,const unsigned int imgh,const unsign
     kernel_convfft<<<grid,block>>>(imgdataComplex_dev,kdata_dev,imgh,imgw);
 
     cufftExecC2R(planInverse,imgdataComplex_dev,imgdata_dev);
+    cudaThreadSynchronize();
     cudaMemcpy(imgdata,imgdata_dev,sizeof(cufftReal)*imgh*imgw,cudaMemcpyDeviceToHost);
 
 //    cudaFree(imgdata_dev);
