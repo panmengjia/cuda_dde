@@ -112,27 +112,41 @@ __global__ void kernel_convfft(cufftComplex* imgdata_dev,cufftComplex* kdata_dev
 
 }
 
+bool first =true;
+cufftReal* imgdata_dev;
+cufftComplex* imgdataComplex_dev;
+cufftComplex* kdata_dev;
+cufftHandle planForward,planInverse;
 
 void fftImgKernel(void* imgdata,void* kdata,const unsigned int imgh,const unsigned int imgw)
 {
-    //img
-    cufftReal* imgdata_dev;
-    cudaMalloc((void**)&imgdata_dev,sizeof(cufftReal)*imgh*imgw);
+    if(first)
+    {
+        //img
+
+        cudaMalloc((void**)&imgdata_dev,sizeof(cufftReal)*imgh*imgw);
+
+
+        //img complex
+
+        cudaMalloc((void**)&imgdataComplex_dev,sizeof(cufftComplex)*imgh*imgw);
+
+        //kernel
+
+        cudaMalloc((void**)&kdata_dev,sizeof(cufftComplex)*imgh*imgw);
+
+
+
+        //handle
+
+        cufftPlan2d(&planForward,imgh,imgw,CUFFT_R2C);
+        cufftPlan2d(&planInverse,imgh,imgw,CUFFT_C2R);
+        first =false;
+    }
+
+    cudaMemcpy(kdata_dev,kdata,sizeof(cufftComplex)*imgh*imgw,cudaMemcpyHostToDevice);
     cudaMemcpy(imgdata_dev,imgdata,sizeof(cufftReal)*imgh*imgw,cudaMemcpyHostToDevice);
 
-    //img complex
-    cufftComplex* imgdataComplex_dev;
-    cudaMalloc((void**)&imgdataComplex_dev,sizeof(cufftComplex)*imgh*imgw);
-
-    //kernel
-    cufftComplex* kdata_dev;
-    cudaMalloc((void**)&kdata_dev,sizeof(cufftComplex)*imgh*imgw);
-    cudaMemcpy(kdata_dev,kdata,sizeof(cufftComplex)*imgh*imgw,cudaMemcpyHostToDevice);
-
-    //handle
-    cufftHandle planForward,planInverse;
-    cufftPlan2d(&planForward,imgh,imgw,CUFFT_R2C);
-    cufftPlan2d(&planInverse,imgh,imgw,CUFFT_C2R);
 
     //fft forward exec
     cufftExecR2C(planForward,imgdata_dev,imgdataComplex_dev);
@@ -146,9 +160,9 @@ void fftImgKernel(void* imgdata,void* kdata,const unsigned int imgh,const unsign
     cufftExecC2R(planInverse,imgdataComplex_dev,imgdata_dev);
     cudaMemcpy(imgdata,imgdata_dev,sizeof(cufftReal)*imgh*imgw,cudaMemcpyDeviceToHost);
 
-    cudaFree(imgdata_dev);
-    cudaFree(imgdataComplex_dev);
-    cudaFree(kdata_dev);
-    cufftDestroy(planForward);
-    cufftDestroy(planInverse);
+//    cudaFree(imgdata_dev);
+//    cudaFree(imgdataComplex_dev);
+//    cudaFree(kdata_dev);
+//    cufftDestroy(planForward);
+//    cufftDestroy(planInverse);
 }

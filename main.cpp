@@ -53,6 +53,7 @@ int main()
     }
 
 
+
     while (cap->read(frame))  //type CV_8UC3
     {
         double time = (double)getTickCount();
@@ -75,7 +76,7 @@ int main()
         IM_bri_T0 = singleChannel;
 
         Mat IM_bri_T = Mat::zeros(IM_bri_T0.size(), IM_bri_T0.type());
-        imshow("IM_bri_T",IM_bri_T);
+//        imshow("IM_bri_T",IM_bri_T);
 
         int M = getOptimalDFTSize( IM_bri_T.rows );                               // 获得最佳DFT尺寸，为2的次方
         int N = getOptimalDFTSize( IM_bri_T.cols );
@@ -90,7 +91,7 @@ int main()
 //        fftQt1(planes.data,paddedInverse.data,planes.rows,planes.cols);
         fftImgKernel(planes.data,kernelComplex[(unsigned int)(thresholdRate * 10)],planes.rows,planes.cols);
         paddedInverse.convertTo(paddedInverse,CV_8UC1,1.0);
-        imshow("paddedInverse",paddedInverse);
+//        imshow("paddedInverse",paddedInverse);
 //        laplacianFilter_GPU_wrapper(IM_bri_T0, IM_bri_T, H_S_f_A_T);
 
 //                        filter2D(IM_bri_T0,IM_bri_T,CV_64FC1,H_S_f_A_T);
