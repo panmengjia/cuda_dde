@@ -1,16 +1,43 @@
 #include "main.h"
 
 //cufft_examples/src/fp16_common.hpp
+#include "string"
 
 
-void fftQt1(uchar* indata,uchar* outdata,const unsigned int heigth,const unsigned int width)
+
+
+
+void fftKernel(void* indata,void* outdata,const unsigned int kh,const unsigned int kw)
+{
+    cufftReal* indata_dev;
+    cufftComplex* outdata_dev;
+    cudaMalloc((void**)&indata_dev,sizeof(cufftReal)*kh*kw);
+    cudaMalloc((void**)&outdata_dev,sizeof(cufftComplex)*kh*(kw/2+1));
+    cudaMemcpy(indata_dev,indata,sizeof(cufftReal)*kw*kh,cudaMemcpyHostToDevice);
+
+    cufftHandle planForward;
+    cufftPlan2d(&planForward,kh,kw,CUFFT_R2C);
+    cufftExecR2C(planForward,indata_dev,outdata_dev);
+    cudaThreadSynchronize();
+
+    cudaMemcpy(outdata,outdata_dev,sizeof(cufftReal)*kh*kw,cudaMemcpyDeviceToHost);
+
+    cufftDestroy(planForward);
+    cudaFree(outdata_dev);
+    cudaFree(indata_dev);
+}
+
+
+
+
+void fftQt1(void* indata,void* outdata,const unsigned int heigth,const unsigned int width)
 {
     cufftComplex* dataComplex_dev;
     cufftReal* indata_dev;
     cufftReal* outdata_dev;
     cudaMalloc((void**)&dataComplex_dev,sizeof(cufftComplex)*heigth*(width/2+1));
     cudaMalloc((void**)&indata_dev,sizeof(cufftReal)*heigth*width);
-     cudaMalloc((void**)&outdata_dev,sizeof(cufftReal)*heigth*width);
+    cudaMalloc((void**)&outdata_dev,sizeof(cufftReal)*heigth*width);
     cudaMemcpy(indata_dev,indata,sizeof(cufftReal)*heigth*width,cudaMemcpyHostToDevice);
     cufftHandle planForward,planInverse;
 
@@ -28,7 +55,6 @@ void fftQt1(uchar* indata,uchar* outdata,const unsigned int heigth,const unsigne
     cudaFree(dataComplex_dev);
     cudaFree(indata_dev);
 }
-
 
 void mainfftQT1()
 {
@@ -60,7 +86,69 @@ void mainfftQT1()
 
 
 
+
 }
 
 
 
+#define BLOCKIZE 32
+//@
+
+__global__ void kernel_convfft(cufftComplex* imgdata_dev,cufftComplex* kdata_dev,const unsigned int imgh,const unsigned int imgw)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if(x< imgw && y < imgh/2 )
+    {
+        imgdata_dev[y*imgw + x].x = imgdata_dev[y*imgw + x].x * kdata_dev[y*imgw + x].x;
+        imgdata_dev[y*imgw + x].y = imgdata_dev[y*imgw + x].y * kdata_dev[y*imgw + x].y;
+    }
+    else if(y >= imgh/2 && x <imgw && y <imgh)
+    {
+        imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x = imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x * kdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].x;
+        imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y = imgdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y * kdata_dev[(imgh-1-y)*imgw + (imgw-1-x)].y;
+    }
+
+}
+
+
+void fftImgKernel(void* imgdata,void* kdata,const unsigned int imgh,const unsigned int imgw)
+{
+    //img
+    cufftReal* imgdata_dev;
+    cudaMalloc((void**)&imgdata_dev,sizeof(cufftReal)*imgh*imgw);
+    cudaMemcpy(imgdata_dev,imgdata,sizeof(cufftReal)*imgh*imgw,cudaMemcpyHostToDevice);
+
+    //img complex
+    cufftComplex* imgdataComplex_dev;
+    cudaMalloc((void**)&imgdataComplex_dev,sizeof(cufftComplex)*imgh*imgw);
+
+    //kernel
+    cufftComplex* kdata_dev;
+    cudaMalloc((void**)&kdata_dev,sizeof(cufftComplex)*imgh*imgw);
+    cudaMemcpy(kdata_dev,kdata,sizeof(cufftComplex)*imgh*imgw,cudaMemcpyHostToDevice);
+
+    //handle
+    cufftHandle planForward,planInverse;
+    cufftPlan2d(&planForward,imgh,imgw,CUFFT_R2C);
+    cufftPlan2d(&planInverse,imgh,imgw,CUFFT_C2R);
+
+    //fft forward exec
+    cufftExecR2C(planForward,imgdata_dev,imgdataComplex_dev);
+    cudaThreadSynchronize();
+
+    //multiply kernel and image
+    dim3 block(BLOCKIZE,BLOCKIZE);
+    dim3 grid((imgw + block.x - 1) / block.x, (imgh + block.y - 1) / block.y);
+    kernel_convfft<<<grid,block>>>(imgdataComplex_dev,kdata_dev,imgh,imgw);
+
+    cufftExecC2R(planInverse,imgdataComplex_dev,imgdata_dev);
+    cudaMemcpy(imgdata,imgdata_dev,sizeof(cufftReal)*imgh*imgw,cudaMemcpyDeviceToHost);
+
+    cudaFree(imgdata_dev);
+    cudaFree(imgdataComplex_dev);
+    cudaFree(kdata_dev);
+    cufftDestroy(planForward);
+    cufftDestroy(planInverse);
+}
