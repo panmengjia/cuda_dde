@@ -144,11 +144,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="opencvdft_qt.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="dde.cu">
       <FileType>Document</FileType>
     </CudaCompile>
+    <CudaCompile Include="fft1_qt.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="main.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
