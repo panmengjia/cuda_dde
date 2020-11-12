@@ -11,8 +11,8 @@
 //#include <qdebug.h>
 
 #define BLOCK_SIZE      8
-#define FILTER_WIDTH    15
-#define FILTER_HEIGHT   15
+#define FILTER_WIDTH    85
+#define FILTER_HEIGHT   85
 
 using namespace std;
 

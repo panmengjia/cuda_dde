@@ -42,7 +42,7 @@ int main()
     vector<Mat> hsfatMat;
     for (int i = 0; i < 15; i++)
     {
-        hsfatMat.push_back(Mat(15, 15, CV_32FC1, temp[i].data()));
+        hsfatMat.push_back(Mat(85, 85, CV_32FC1, temp[i].data()));
     }
 
     while (cap->read(frame))  //type CV_8UC3
@@ -67,9 +67,14 @@ int main()
 
         Mat IM_bri_T = Mat::zeros(IM_bri_T0.size(), IM_bri_T0.type());
 
+
+        double time2 = getTickCount();
         laplacianFilter_GPU_wrapper(IM_bri_T0, IM_bri_T, H_S_f_A_T);
 
         //                filter2D(IM_bri_T0,IM_bri_T,CV_64FC1,H_S_f_A_T);
+        time2 = (getTickCount() - time2)*1000 / getTickFrequency();
+        cout << "time2 = " << time2 << endl;
+
         Mat meanOfIM_bri_T, stdDevOfIM_bri_T;
         meanStdDev(IM_bri_T, meanOfIM_bri_T, stdDevOfIM_bri_T);
         IM_bri_T = IM_bri_T / meanOfIM_bri_T.at<double>(0, 0) * meanBri.at<double>(0, 0) / 1;
@@ -102,7 +107,7 @@ void ycbcrUpdate(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_
 
 vector<vector<float>> extractConvMat0()
 {
-    const string& str = "C:/Users/b515/Desktop/pmj/cuda_dde/fenglin/15/";
+    const string& str = "C:/Users/b515/Desktop/pmj/cuda_dde/fenglin/85/";
     vector<vector<float>> HVSFT;
     HVSFT.resize(15);
     //    unsigned int counter = 0;
