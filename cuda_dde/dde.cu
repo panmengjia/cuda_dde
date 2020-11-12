@@ -1,13 +1,8 @@
 //
 // CUDA implementation of Laplacian Filter
 //
-#include "opencv2/opencv.hpp"
-#include <opencv2/highgui.hpp>
-#include <iostream>
-#include <string>
-#include <stdio.h>
-#include <cuda.h>
-#include "cuda_runtime.h"
+
+#include "main.h"
 //#include <qdebug.h>
 
 #define BLOCK_SIZE      8
@@ -28,8 +23,8 @@ bool initialized = false;
 // Run Laplacian Filter on GPU
 __global__ void laplacianFilter(unsigned char* srcImage, unsigned char* dstImage, unsigned int width, unsigned int height, float* kernel0)
 {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int x = blockIdx.x * blockDim.x + threadIdx.x;  //block在grid中的序号 block在x维度的大小 线程在一个block中的序号
+    int y = blockIdx.y * blockDim.y + threadIdx.y;   //线程的全局index
 
     //float kernel[3][3] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
     // only threads inside image will write results
@@ -82,7 +77,7 @@ extern "C" void laplacianFilter_GPU_wrapper(const cv::Mat & input, cv::Mat & out
     // Start time
     cudaEventRecord(start, 0);
 
-    laplacianFilter << <grid, block >> > (d_input, d_output, output.cols, output.rows, d_kernel);
+    laplacianFilter <<<grid, block >>> (d_input, d_output, output.cols, output.rows, d_kernel);  //网格中线程块的维度，一共有多少的线程块；线程块中线程的维度，每个线程块一共有多少个线程
 
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);

@@ -1,17 +1,35 @@
+
 #include "main.h"
 
+extern "C" bool laplacianFilter_GPU_wrapper(const cv::Mat & input, cv::Mat & output, const cv::Mat & kernel);
 
-int main(int argc,char** argv)
+void ycbcrUpdate(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_cbcr_re);
+
+vector<vector<float>> extractConvMat0();
+
+int maindde()
 {
-	//double time = (double)getTickCount();
-	//mainfft();
-	//time = (getTickCount() - time)*1000 / getTickFrequency();
-	//cout << "time = " << time <<"ms"<< endl;
-	
-	//while (1)
-	//{
-	//	fft2main();
-	//}
+    VideoCapture* cap = new VideoCapture("C:\\Users\\b515\\Desktop\\pmj\\cuda_dde\\fenglin\\130 (2).avi");
+    if (!cap->isOpened())
+    {
+        cout << "video is empty!!" << endl;
+    }
+    Mat frame; //1080 1920
+    //discard the first 25 frames
+    while (cap->read(frame))
+    {
+        static unsigned int counter = 0;
+        if (++counter == 25)
+        {
+            break;
+        }
+    }
+    Mat meanFrame, stdDevFrame, singleChannel/*IM_bri*/;
+    double mean;
+    vector<Mat> splitFrame2bgr3;
+
+    Mat meanBri, stdDevBri;
+    double thresholdRate;
 
     Mat IM_bri_T0;
     //
@@ -19,12 +37,12 @@ int main(int argc,char** argv)
     vector<Mat> hsfatMat;
     for (int i = 0; i < 15; i++)
     {
-        hsfatMat.push_back(Mat(85, 85, CV_32FC1, temp[i].data()));
+        hsfatMat.push_back(Mat(15, 15, CV_32FC1, temp[i].data()));
     }
 
     while (cap->read(frame))  //type CV_8UC3
     {
-        double time = getTickCount();
+        double time = (double)getTickCount();
         meanStdDev(frame, meanFrame, stdDevFrame);
         mean /*results_de_mean*/ = (meanFrame.at<Vec3d>(0, 0)[0] + meanFrame.at<Vec3d>(0, 0)[1] + meanFrame.at<Vec3d>(0, 0)[2]) / 3;
         split(frame, splitFrame2bgr3);
@@ -38,20 +56,15 @@ int main(int argc,char** argv)
             thresholdRate = 0.6;
         }
         cout << "thresholdRate*10:   " << thresholdRate * 10 << endl;
-        Mat H_S_f_A_T = hsfatMat[thresholdRate * 10];
+        Mat H_S_f_A_T = hsfatMat[(unsigned __int64)(thresholdRate * 10)];
 
         IM_bri_T0 = singleChannel;
 
         Mat IM_bri_T = Mat::zeros(IM_bri_T0.size(), IM_bri_T0.type());
 
-
-        double time2 = getTickCount();
         laplacianFilter_GPU_wrapper(IM_bri_T0, IM_bri_T, H_S_f_A_T);
 
         //                filter2D(IM_bri_T0,IM_bri_T,CV_64FC1,H_S_f_A_T);
-        time2 = (getTickCount() - time2)*1000 / getTickFrequency();
-        cout << "time2 = " << time2 << endl;
-
         Mat meanOfIM_bri_T, stdDevOfIM_bri_T;
         meanStdDev(IM_bri_T, meanOfIM_bri_T, stdDevOfIM_bri_T);
         IM_bri_T = IM_bri_T / meanOfIM_bri_T.at<double>(0, 0) * meanBri.at<double>(0, 0) / 1;
@@ -84,14 +97,14 @@ void ycbcrUpdate(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_
 
 vector<vector<float>> extractConvMat0()
 {
-    const string& str = "C:/Users/b515/Desktop/pmj/cuda_dde/fenglin/85/";
+    const string& str = "C:/Users/b515/Desktop/pmj/cuda_dde/fenglin/15/";
     vector<vector<float>> HVSFT;
     HVSFT.resize(15);
     //    unsigned int counter = 0;
     for (int i = 1; i < 16; i++)
     {
         ifstream dataFile(str + to_string(i) + ".txt");
-        double dataElement;
+        float dataElement;
         while (dataFile >> dataElement)
         {
             HVSFT[i - 1].push_back(dataElement);
