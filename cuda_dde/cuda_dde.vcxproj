@@ -143,13 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="cudadft.cu">
-      <FileType>Document</FileType>
-    </CudaCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="maindde.cpp" />
-    <CudaCompile Include="fft1.cu" />
-    <CudaCompile Include="fftTest.cu" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="dde.cu">

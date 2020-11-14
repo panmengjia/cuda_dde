@@ -18,21 +18,9 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="maindde.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="dde.cu">
-      <Filter>源文件</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cudadft.cu">
-      <Filter>源文件</Filter>
-    </CudaCompile>
-    <CudaCompile Include="fftTest.cu">
-      <Filter>源文件</Filter>
-    </CudaCompile>
-    <CudaCompile Include="fft1.cu">
       <Filter>源文件</Filter>
     </CudaCompile>
   </ItemGroup>
