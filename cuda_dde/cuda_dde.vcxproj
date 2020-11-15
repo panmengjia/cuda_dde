@@ -144,11 +144,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="maindde.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="cudadft.cu" />
     <CudaCompile Include="dde.cu">
       <FileType>Document</FileType>
     </CudaCompile>
+    <CudaCompile Include="fft1.cu" />
+    <CudaCompile Include="fftTest.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h" />

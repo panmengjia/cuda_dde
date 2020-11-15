@@ -3,9 +3,9 @@
 
 extern "C" bool laplacianFilter_GPU_wrapper(const cv::Mat & input, cv::Mat & output, const cv::Mat & kernel);
 
-void ycbcrUpdate(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_cbcr_re);
+void ycbcrUpdate1(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_cbcr_re);
 
-vector<vector<float>> extractConvMat0();
+vector<vector<float>> extractConvMat01();
 
 int maindde()
 {
@@ -33,7 +33,7 @@ int maindde()
 
     Mat IM_bri_T0;
     //
-    vector<vector<float>> temp = extractConvMat0();
+    vector<vector<float>> temp = extractConvMat01();
     vector<Mat> hsfatMat;
     for (int i = 0; i < 15; i++)
     {
@@ -72,7 +72,7 @@ int maindde()
         Mat IM_result_cbcr;
         cvtColor(frame, IM_result_cbcr, COLOR_BGR2YCrCb);
         Mat IM_result_cbcr_re;
-        ycbcrUpdate(IM_result_cbcr, IM_bri_T, IM_result_cbcr_re);
+        ycbcrUpdate1(IM_result_cbcr, IM_bri_T, IM_result_cbcr_re);
 
         imshow("frame", frame);
         imshow("IM_result_cbcr_re", IM_result_cbcr_re);
@@ -84,7 +84,7 @@ int maindde()
     return 0;
 }
 
-void ycbcrUpdate(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_cbcr_re)
+void ycbcrUpdate1(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_cbcr_re)
 {
     vector<Mat> channelsOfIM;
     split(IM_result_cbcr, channelsOfIM);
@@ -95,7 +95,7 @@ void ycbcrUpdate(const Mat& IM_result_cbcr, const Mat& IM_bri_T, Mat& IM_result_
     cvtColor(IM_result_cbcr_re, IM_result_cbcr_re, COLOR_YCrCb2BGR);
 }
 
-vector<vector<float>> extractConvMat0()
+vector<vector<float>> extractConvMat01()
 {
     const string& str = "C:/Users/b515/Desktop/pmj/cuda_dde/fenglin/15/";
     vector<vector<float>> HVSFT;
