@@ -1,11 +1,16 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 //#include <unistd.h>
 #include <fstream>
 #include "cuda_fp16.h"
+#include "main.h"
 
 using namespace cv;
 using namespace std;
+
+////////////////////////////////////////////////////first version///////////////////////////////////////////////////////////////////////////
 
 extern "C" bool laplacianFilter_GPU_wrapper(const cv::Mat& input, cv::Mat& output, const cv::Mat& kernel);
 
@@ -137,23 +142,14 @@ vector<vector<float>> extractConvMat0()
     }
     return HVSFT;
 }
-
+////////////////////////////////////////////////////first version///////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////gpu conv after vs debug 副本////////////////////////////////////////////////////////////////
 
-#define VIDEO_DIR ("/home/nvidia/Desktop/dde1448/130(3).avi")
-#define TXT_DIR ("/home/nvidia/Desktop/dde1448/15/")
 
 #define CVTCOLOR (true)
 extern "C" void convfp16(const __half * indata, __half * outdata, __half * kerneldata, const int width, const int height);
 
-
-#define BLOCK_SIZE      (8)
-#define FILTER_WIDTH    (15)
-#define FILTER_HEIGHT   (15)  //85 vs 2.2seconds  核越大黑色，边框越大
-
-#define IMG_HEIGHT  (1080)
-#define IMG_WIDTH   (1920)
 
 void test()
 {
@@ -291,9 +287,204 @@ void test()
 ////////////////////////////////////////////////gpu conv after vs debug副本////////////////////////////////////////////////////////////////
 
 
+////////////////////////////////////////////////////////cuda dft mulSpectrum副本////////////////////////////////////////////////////////////////////
+
+
+/*
+* cuda dft mulSpectrum
+* 2020.11.19继承前面使用cuda核函数写的频谱相乘，修改错误，规范代码
+*
+*
+*
+*/
+
+#define CVTCOLOR (true)
+
+void cudaFFTmulSpectrum1119float()
+{
+    /////////////////////////////////////////////读取txt////////////////////////////////////////////
+    const string str = "/home/nvidia/Desktop/dde1448/15/";
+    vector<vector<float>> dataAllFile;
+    vector<float> dataPerFile;
+    float dataElement;
+    //vector<Mat> kernelMat;
+    for (int i = 0; i < 15; ++i)
+    {
+        //vector<float> dataPerFile;
+        ifstream dataFile(str + to_string(i + 1) + ".txt");
+        while (dataFile >> dataElement)
+        {
+            dataPerFile.push_back(dataElement);
+        }
+        dataFile.close();
+        dataAllFile.push_back(dataPerFile);
+        dataPerFile.clear();
+    }
+
+    vector<Mat> kernelMat;
+    cufftComplex* kernelComplex[15];
+    Mat kernelPadded;
+
+    for (int i = 0; i < 15; ++i) //在外面只能得到最后一次的数据结果，之前的都被覆盖了
+    {
+        kernelComplex[i] = (cufftComplex*)malloc(sizeof(cufftComplex) * IMG_HEIGHT * (IMG_WIDTH / 2 + 1));
+        kernelMat.push_back(Mat(FILTER_HEIGHT, FILTER_WIDTH, CV_32FC1, dataAllFile[i].data()));
+        copyMakeBorder(kernelMat[i], kernelPadded, 0, IMG_HEIGHT - kernelMat[i].rows, 0, IMG_WIDTH - kernelMat[i].cols, BORDER_CONSTANT, Scalar(0)); //Scalar::all(0)
+        fftKernel((cufftReal*)kernelPadded.data, kernelComplex[i], kernelPadded.rows, kernelPadded.cols);/*IMG_HEIGHT, IMG_WIDTH);*/
+        //kernelMat[i].convertTo(kernelMat[i], CV_16FC1);
+    }
+
+    cout << kernelMat[6] << endl;
+    //测试代码
+    //测试fftKernel与dft结果的异同，是完全一样的
+    //opencv dft的complex形式与cufft的cudaComplex的数据结构是一样的
+    //行优先存储，连续
+    cufftComplex* kernelComplex6 = (cufftComplex*)malloc(sizeof(cufftComplex) * IMG_HEIGHT * (IMG_WIDTH / 2 + 1));
+    Mat kernelPadded6;
+    copyMakeBorder(kernelMat[6], kernelPadded6, 0, IMG_HEIGHT - kernelMat[6].rows, 0, IMG_WIDTH - kernelMat[6].cols, BORDER_CONSTANT, Scalar::all(0));   // opencv中的边界扩展函数，提供多种方式扩展
+    fftKernel((cufftReal*)kernelPadded6.data, kernelComplex6, kernelPadded6.rows, kernelPadded6.cols);
+    //cout << kernelpadded6 << endl;
+    cout << kernelMat[6] << endl;
+
+    //通道连续存储，两者可以完美对应
+    Mat kernelComplex6Mat = Mat(IMG_HEIGHT, (IMG_WIDTH / 2 + 1), CV_32FC2, kernelComplex6);
+    cout << kernelComplex6Mat(Rect(0, 0, 15, 15)) << endl;
+
+    Mat planes[] = { kernelPadded6,Mat::zeros(kernelPadded6.size(),CV_32F) };
+    Mat complexImg;
+    merge(planes, 2, complexImg);
+    dft(complexImg, complexImg);
+    /////////////////////////////////////////////读取txt////////////////////////////////////////////
+
+    /////////////////////////////////////////////DDEfilter////////////////////////////////////////////
+    VideoCapture* cap = new VideoCapture(VIDEO_DIR);
+    if (!cap->isOpened())
+    {
+        cout << "video is empty!!" << endl;
+    }
+    Mat frame; //1080 1920
+    Mat outFrame, singleFrame, meanSF, stdDevSF, selectedKernelMat, SFfp32, SFfp32out, frameYUV;
+    vector<Mat> frame3channels, frame3YUV;
+    double threshRate;
+
+    while (1)
+    {
+        double time = (double)getTickCount();
+        double time2 = (double)getTickCount();
+        cap->read(frame);
+#if CVTCOLOR
+        cvtColor(frame, singleFrame, COLOR_BGR2GRAY);
+#else
+        split(frame, frame3channels);
+        singleFrame = 0.257 * frame3channels[2] + 0.564 * frame3channels[1] + 0.098 * frame3channels[0];
+#endif
+        meanStdDev(singleFrame, meanSF, stdDevSF);
+
+        threshRate = meanSF.at<double>(0, 0) / stdDevSF.at<double>(0, 0) * meanSF.at<double>(0, 0) / 80 + 0.2;
+        if (threshRate > 0.6)
+        {
+            threshRate = 0.6;
+        }
+        cout << "threshRate*10: " << threshRate * 10 << endl;
+        selectedKernelMat = kernelMat[(unsigned int)(threshRate * 10)];
+        time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+        cout << "   time while pre   =  " << time2 << "  ms" << endl;
+
+        time2 = (double)getTickCount();
+        //singleFrame.convertTo(SFfp16, CV_16FC1);
+        //SFfp16out = Mat(SFfp16.size(), CV_16FC1); //已开辟内存，但是随机数，都是-23.0
+        singleFrame.convertTo(SFfp32, CV_32FC1);
+        SFfp32out = Mat(SFfp32.size(), CV_32FC1); //已开辟内存，但是随机数，都是-23.0
+
+        time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+        cout << "   time creat SFfp32out convertTo SFfp32Frame   =  " << time2 << "  ms" << endl;
+
+        time2 = (double)getTickCount();
+        /* laplacianFilter_GPU_wrapper(SFfp16, SFfp16out, selectedKernelMat);*/
+         //convfp16((__half*)SFfp16.data, (__half*)SFfp16out.data, (__half*)selectedKernelMat.data, SFfp16.cols, SFfp16.rows); //.ptr() .data返回的都是一级指针（列指针）
+
+        //timeCall = (double)getTickCount();
+        //convolveDFT(SFfp32, selectedKernelMat, SFfp32out);
+
+        fftImgKernel((cufftReal*)SFfp32.data, (cufftReal*)SFfp32out.data, kernelComplex[(unsigned int)(threshRate * 10)], SFfp32.rows, SFfp32.cols);
+
+        time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+        cout << "   time convDFT   =  " << time2 << "  ms" << endl;
+
+        time2 = (double)getTickCount();
+        //SFfp32out.convertTo(SFfp32out, CV_8UC1);
+        SFfp32out.convertTo(SFfp32out, CV_8UC1,1/((float)IMG_HEIGHT*(float)IMG_WIDTH)); //真是不懂到底要不要乘以255
+        time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+        cout << "   time convertTo SFfp32out fp32->8u  =  " << time2 << "  ms" << endl;
+
+        time2 = (double)getTickCount();
+        Scalar meanSFfp32out = mean(SFfp32out);
+        SFfp32out = SFfp32out / meanSFfp32out[0] * meanSF.at<double>(0, 0) / 1;
+        time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+        cout << "   time mean of SF32fp32out  =  " << time2 << "  ms" << endl;
+
+        time2 = (double)getTickCount();
+        cvtColor(frame, frameYUV, COLOR_BGR2YCrCb);
+        split(frameYUV, frame3YUV);
+        frame3YUV[0] = SFfp32out;
+        merge(frame3YUV, frameYUV);
+        cvtColor(frameYUV, outFrame, COLOR_YCrCb2BGR);
+        time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+        cout << "   time cvtColor yuv  =  " << time2 << "  ms" << endl;
+
+        time2 = (double)getTickCount();
+        imshow("frame", frame);
+        imshow("outFrame", outFrame);
+        time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+        cout << "   time imshow  =  " << time2 << "  ms" << endl;
+
+
+        double fps = getTickFrequency() / (getTickCount() - time);
+        time = (double)(getTickCount() - time) * 1000 / getTickFrequency();
+        cout << "  time total =  " << time << "  ms" << endl;
+        cout << "fps" << fps << endl;
+        waitKey(1);
+    }
+
+    delete cap;
+    /////////////////////////////////////////////DDEfilter////////////////////////////////////////////
+}
+
+////////////////////////////////////////////////////////cuda dft mulSpectrum副本////////////////////////////////////////////////////////////////////
+
+void video()
+{
+    VideoCapture cap(VIDEO_DIR);
+    Mat frame;
+
+    clock_t start,finish;
+    double totaltime;
+
+    double time_pre;
+    while(cap.read(frame))
+    {
+
+        double time = (double)getTickCount();
+//        imshow("frame",frame);
+        waitKey(1);
+        time = (double)getTickFrequency()/(getTickCount() - time);
+        cout <<"fps  =  "<<(time+time_pre)/2<<endl;
+        time_pre = (time+time_pre)/2;
+
+
+        finish=clock();
+        totaltime=(double)(finish-start)/CLOCKS_PER_SEC;
+        std::cout<<"\n此程序的运行时间为"<<totaltime<<"秒！"<<std::endl;
+        start=clock();
+    }
+}
+
 int main()
 {
 
-    test();
+    main_();
+//    test();
+//    video();
+//    cudaFFTmulSpectrum1119float();
     return 0;
 }
