@@ -2,8 +2,8 @@
 #define MAIN_H__
 
 
-#define VIDEO_DIR ("/home/nvidia/Desktop/dde1448/130(3).avi")
-#define TXT_DIR ("/home/nvidia/Desktop/dde1448/15/")
+#define VIDEO_DIR ("130(3).avi")
+#define TXT_DIR ("15/")
 
 
 #include "cuda.h"

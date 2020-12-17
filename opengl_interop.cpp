@@ -508,8 +508,9 @@ public:
         m_mode            = MODE_CPU;
         m_modeStr[0]      = cv::String("Processing on CPU");
         m_modeStr[1]      = cv::String("Processing on GPU");
-        m_frame_bgr       = frame;
-        m_frame_bgr.data  = frame.data;
+//        m_frame_bgr       = frame;
+//        m_frame_bgr.data  = frame.data;
+        memcpy(&m_frame_bgr,&frame,sizeof(Mat));
     }
 
     ~cv_gl() {}
@@ -951,6 +952,10 @@ int main(int argc, char** argv)
 
 //    cv::waitKey(10000);
 //    cap>>frame;
+
+    cout <<"outFrame.total()   "<<outFrame->total()<<endl;
+//    cout <<"outFrame.data      "<<outFrame->data<<endl;
+    printf("outFrame.data   %x\n",outFrame->data);
     cv_gl app_cv_gl(width, height, wndname, *outFrame);
     cout <<"             "<<app_cv_gl.thread_flag<<endl;
 
@@ -999,7 +1004,7 @@ int main(int argc, char** argv)
 static void* cudaFFTmulSpectrum1119float(void* flag)
 {
     /////////////////////////////////////////////读取txt////////////////////////////////////////////
-    string str = "/home/nvidia/Desktop/dde1448/15/";
+    string str = TXT_DIR;
     vector<vector<float>> dataAllFile;
     vector<float> dataPerFile;
     float dataElement;
