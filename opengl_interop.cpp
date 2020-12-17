@@ -654,12 +654,12 @@ public:
             if (!XCheckWindowEvent(m_display, m_window, m_event_mask, &e) || !handle_event(e))
             {
 //                cout <<"jdhfudfhjfhg------------------------"<<thread_flag<<endl;
-                if(!thread_flag)
-                {
+//                if(!thread_flag)
+//                {
                     idle();
                     cout <<"----------------running idle--------------"<<endl;
-                    thread_flag = true;
-                }
+//                    thread_flag = true;
+//                }
 
             }
         } while (!m_end_loop);
@@ -871,33 +871,33 @@ cv::VideoCapture cap;
 
 static void* cudaFFTmulSpectrum1119float(void* flag);
 
-//void* thread_callback(void* flag)
-//{
-//    static int thread_count = 0;
-//    while(1)
-//    {
-////        cout <<*(bool*)flag<<endl;
-//        if(*(bool*)flag)
-//        {
+void* thread_callback(void* flag)
+{
+    static int thread_count = 0;
+    while(1)
+    {
+//        cout <<*(bool*)flag<<endl;
+        if(*(bool*)flag)
+        {
 
-//           cout <<"------------"<<++thread_count<<"--------------"<<endl;
-//           if(!cap.read(frame))
-//           {
-//               if(frame.empty())
-//               {
-//                  cout <<"frame is empty"<<endl;
-//               }
-//               cout <<"------------------exit thread of cap.read(frame)----------------"<<endl;
-//               break;
-//           }
-//           *(bool*)flag = false;
-////           cout<<"----------frame---"<<*(bool*)flag<<"------"<<endl;
-////           cv::imshow("frame",frame);
-////           cv::waitKey(100);
-//        }
-//    }
-//    cout <<"---------------------hdfjhdufnkjghn-----"<<endl;
-//}
+           cout <<"------------"<<++thread_count<<"--------------"<<endl;
+           if(!cap.read(frame))
+           {
+               if(frame.empty())
+               {
+                  cout <<"frame is empty"<<endl;
+               }
+               cout <<"------------------exit thread of cap.read(frame)----------------"<<endl;
+               break;
+           }
+           *(bool*)flag = false;
+//           cout<<"----------frame---"<<*(bool*)flag<<"------"<<endl;
+//           cv::imshow("frame",frame);
+//           cv::waitKey(100);
+        }
+    }
+    cout <<"---------------------hdfjhdufnkjghn-----"<<endl;
+}
 
 
 int main(int argc, char** argv)
@@ -1067,8 +1067,8 @@ static void* cudaFFTmulSpectrum1119float(void* flag)
 
     while (1)
     {
-        if(*(bool*)flag)
-        {
+//        if(*(bool*)flag)
+//        {
             double time = (double)getTickCount();
             double time2 = (double)getTickCount();
 //            cap->read(frame);
@@ -1157,9 +1157,9 @@ static void* cudaFFTmulSpectrum1119float(void* flag)
             //        waitKey(1);
 
             ///
-            *(bool*)flag = false;
+//            *(bool*)flag = false;
 
-        }
+//        }  //end if
     }
 
 //    delete cap;
