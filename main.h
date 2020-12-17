@@ -11,7 +11,7 @@
 #include "cufft.h"
 #include<fstream>
 
-#define BLOCK_SIZE      (32)
+#define BLOCK_SIZE      (16)
 #define FILTER_WIDTH    (15)
 #define FILTER_HEIGHT   (15)  //85 vs 2.2seconds  核越大黑色，边框越大
 
