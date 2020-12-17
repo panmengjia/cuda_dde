@@ -900,6 +900,14 @@ static void* cudaFFTmulSpectrum1119float(void* flag);
 //}
 
 
+std::string gstreamer_pipeline (int capture_width, int capture_height, int display_width, int display_height, int framerate, int flip_method) {
+    return "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)" + std::to_string(capture_width) + ", height=(int)" +
+           std::to_string(capture_height) + ", format=(string)NV12, framerate=(fraction)" + std::to_string(framerate) +
+           "/1 ! nvvidconv flip-method=" + std::to_string(flip_method) + " ! video/x-raw, width=(int)" + std::to_string(display_width) + ", height=(int)" +
+           std::to_string(display_height) + ", format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+}
+
+
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv, keys);
@@ -918,13 +926,31 @@ int main(int argc, char** argv)
     parser.printMessage();
 
 
+    int capture_width = 1280 ;
+    int capture_height = 720 ;
+    int display_width = 1920 ;
+    int display_height = 1080 ;
+    int framerate = 24 ;
+    int flip_method = 0 ;
+
+    std::string pipeline = gstreamer_pipeline(capture_width,
+    capture_height,
+    display_width,
+    display_height,
+    framerate,
+    flip_method);
 
 //    if (file.empty())
 //        cap.open(camera_id);
 //    else
 //        cap.open(file.c_str());
 
-    cap.open(VIDEO_DIR);
+//    cap.open(0);
+    cap.open(pipeline, cv::CAP_GSTREAMER);
+    cap>>frame;
+    imshow("frame",frame);
+
+    waitKey(0);
 
     if (!cap.isOpened())
     {
@@ -951,6 +977,7 @@ int main(int argc, char** argv)
 
 //    cv::waitKey(10000);
 //    cap>>frame;
+
     cv_gl app_cv_gl(width, height, wndname, *outFrame);
     cout <<"             "<<app_cv_gl.thread_flag<<endl;
 
@@ -999,7 +1026,7 @@ int main(int argc, char** argv)
 static void* cudaFFTmulSpectrum1119float(void* flag)
 {
     /////////////////////////////////////////////读取txt////////////////////////////////////////////
-    string str = "/home/nvidia/Desktop/dde1448/15/";
+    string str = "/home/pmj-nano/Desktop/dde1448/15/";
     vector<vector<float>> dataAllFile;
     vector<float> dataPerFile;
     float dataElement;

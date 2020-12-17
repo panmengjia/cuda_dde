@@ -2,8 +2,8 @@
 #define MAIN_H__
 
 
-#define VIDEO_DIR ("/home/nvidia/Desktop/dde1448/130(3).avi")
-#define TXT_DIR ("/home/nvidia/Desktop/dde1448/15/")
+#define VIDEO_DIR ("/home/pmj-nano/Desktop/dde1448/130(3).avi")
+#define TXT_DIR ("/home/pmj-nano/Desktop/dde1448/15/")
 
 
 #include "cuda.h"
@@ -11,7 +11,7 @@
 #include "cufft.h"
 #include<fstream>
 
-#define BLOCK_SIZE      (32)
+#define BLOCK_SIZE      (16)
 #define FILTER_WIDTH    (15)
 #define FILTER_HEIGHT   (15)  //85 vs 2.2seconds  核越大黑色，边框越大
 

@@ -20,7 +20,7 @@ vector<vector<float>> extractConvMat0();
 
 int main_()
 {
-    VideoCapture* cap = new VideoCapture("/home/nvidia/Desktop/dde1448/130(3).avi");
+    VideoCapture* cap = new VideoCapture("/home/pmj-nano/Desktop/dde1448/130(3).avi");
     if(!cap->isOpened())
     {
         cout <<"video is empty!!"<<endl;
@@ -126,7 +126,7 @@ void ycbcrUpdate(const Mat& IM_result_cbcr,const Mat& IM_bri_T ,Mat& IM_result_c
 
 vector<vector<float>> extractConvMat0()
 {
-    const string& str = "/home/nvidia/Desktop/dde1448/15/";
+    const string& str = "/home/pmj-nano/Desktop/dde1448/15/";
     vector<vector<float>> HVSFT;
     HVSFT.resize(15);
     //    unsigned int counter = 0;
@@ -303,7 +303,7 @@ void test()
 static void cudaFFTmulSpectrum1119float()
 {
     /////////////////////////////////////////////读取txt////////////////////////////////////////////
-    const string str = "/home/nvidia/Desktop/dde1448/15/";
+    const string str = "/home/pmj-nano/Desktop/dde1448/15/";
     vector<vector<float>> dataAllFile;
     vector<float> dataPerFile;
     float dataElement;
