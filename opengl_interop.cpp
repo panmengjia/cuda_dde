@@ -653,14 +653,12 @@ public:
 
             if (!XCheckWindowEvent(m_display, m_window, m_event_mask, &e) || !handle_event(e))
             {
-//                cout <<"jdhfudfhjfhg------------------------"<<thread_flag<<endl;
-//                if(!thread_flag)
-//                {
+                if(!thread_flag)
+                {
                     idle();
                     cout <<"----------------running idle--------------"<<endl;
-//                    thread_flag = true;
-//                }
-
+                    thread_flag = true;
+                }
             }
         } while (!m_end_loop);
 
@@ -876,7 +874,6 @@ void* thread_callback(void* flag)
     static int thread_count = 0;
     while(1)
     {
-//        cout <<*(bool*)flag<<endl;
         if(*(bool*)flag)
         {
 
@@ -891,12 +888,9 @@ void* thread_callback(void* flag)
                break;
            }
            *(bool*)flag = false;
-//           cout<<"----------frame---"<<*(bool*)flag<<"------"<<endl;
-//           cv::imshow("frame",frame);
-//           cv::waitKey(100);
         }
     }
-    cout <<"---------------------hdfjhdufnkjghn-----"<<endl;
+    cout <<"--------------------end of thread_callback(frame)------------------"<<endl;
 }
 
 
@@ -999,12 +993,12 @@ int main(int argc, char** argv)
 static void* cudaFFTmulSpectrum1119float(void* flag)
 {
     /////////////////////////////////////////////读取txt////////////////////////////////////////////
-    string str = "/home/nvidia/Desktop/dde1448/15/";
+    string str = TXT_DIR;
     vector<vector<float>> dataAllFile;
     vector<float> dataPerFile;
     float dataElement;
     //vector<Mat> kernelMat;
-    for (int i = 0; i < 15; ++i)
+    for (int i = 0; i < FILTER_NUM; ++i)
     {
         //vector<float> dataPerFile;
         ifstream dataFile(str + to_string(i + 1) + ".txt");
@@ -1018,38 +1012,18 @@ static void* cudaFFTmulSpectrum1119float(void* flag)
     }
 
     vector<Mat> kernelMat;
-    cufftComplex* kernelComplex[15];
+    cufftComplex* kernelComplex[FILTER_NUM];
     Mat kernelPadded;
 
-    for (int i = 0; i < 15; ++i) //在外面只能得到最后一次的数据结果，之前的都被覆盖了
+    for (int i = 0; i < FILTER_NUM; ++i)
     {
         kernelComplex[i] = (cufftComplex*)malloc(sizeof(cufftComplex) * IMG_HEIGHT * (IMG_WIDTH / 2 + 1));
-        kernelMat.push_back(Mat(FILTER_HEIGHT, FILTER_WIDTH, CV_32FC1, dataAllFile[i].data()));
-        copyMakeBorder(kernelMat[i], kernelPadded, 0, IMG_HEIGHT - kernelMat[i].rows, 0, IMG_WIDTH - kernelMat[i].cols, BORDER_CONSTANT, Scalar(0)); //Scalar::all(0)
+        kernelMat.push_back(Mat(FILTER_HEIGHT_SRC, FILTER_WIDTH_SRC, CV_32FC1, dataAllFile[i].data()));
+        copyMakeBorder(kernelMat[i](Rect(61,61,9,9)), kernelPadded, 0, IMG_HEIGHT - kernelMat[i](Rect(61,61,9,9)).rows, 0, IMG_WIDTH - kernelMat[i](Rect(61,61,9,9)).cols, BORDER_CONSTANT, Scalar(0)); //Scalar::all(0)
         fftKernel((cufftReal*)kernelPadded.data, kernelComplex[i], kernelPadded.rows, kernelPadded.cols);/*IMG_HEIGHT, IMG_WIDTH);*/
         //kernelMat[i].convertTo(kernelMat[i], CV_16FC1);
     }
 
-    cout << kernelMat[6] << endl;
-    //测试代码
-    //测试fftKernel与dft结果的异同，是完全一样的
-    //opencv dft的complex形式与cufft的cudaComplex的数据结构是一样的
-    //行优先存储，连续
-    cufftComplex* kernelComplex6 = (cufftComplex*)malloc(sizeof(cufftComplex) * IMG_HEIGHT * (IMG_WIDTH / 2 + 1));
-    Mat kernelPadded6;
-    copyMakeBorder(kernelMat[6], kernelPadded6, 0, IMG_HEIGHT - kernelMat[6].rows, 0, IMG_WIDTH - kernelMat[6].cols, BORDER_CONSTANT, Scalar::all(0));   // opencv中的边界扩展函数，提供多种方式扩展
-    fftKernel((cufftReal*)kernelPadded6.data, kernelComplex6, kernelPadded6.rows, kernelPadded6.cols);
-    //cout << kernelpadded6 << endl;
-    cout << kernelMat[6] << endl;
-
-    //通道连续存储，两者可以完美对应
-    Mat kernelComplex6Mat = Mat(IMG_HEIGHT, (IMG_WIDTH / 2 + 1), CV_32FC2, kernelComplex6);
-    cout << kernelComplex6Mat(Rect(0, 0, 15, 15)) << endl;
-
-    Mat planes[] = { kernelPadded6,Mat::zeros(kernelPadded6.size(),CV_32F) };
-    Mat complexImg;
-    merge(planes, 2, complexImg);
-    dft(complexImg, complexImg);
     /////////////////////////////////////////////读取txt////////////////////////////////////////////
 
     /////////////////////////////////////////////DDEfilter////////////////////////////////////////////
@@ -1061,17 +1035,24 @@ static void* cudaFFTmulSpectrum1119float(void* flag)
 //    Mat frame; //1080 1920
     Mat singleFrame, meanSF, stdDevSF, selectedKernelMat, SFfp32, SFfp32out, frameYUV; //outFrame,
     vector<Mat> frame3channels, frame3YUV;
+    Mat minFrame(1080,1920,CV_8UC1);
     double threshRate;
 
     static uint thread_count=0;
 
+    Mat lut_table(1,256,CV_8UC1);
+    for(int i=0;i<256;i++)
+    {
+        lut_table.at<uchar>(0,i) = pow((i/255.0),(1.4))*255;
+    }
+    cout <<lut_table<<endl;
+
     while (1)
     {
-//        if(*(bool*)flag)
-//        {
+        if(*(bool*)flag)
+        {
             double time = (double)getTickCount();
             double time2 = (double)getTickCount();
-//            cap->read(frame);
             cout <<"------------"<<++thread_count<<"--------------"<<endl;
             if(!cap.read(frame))
             {
@@ -1083,83 +1064,80 @@ static void* cudaFFTmulSpectrum1119float(void* flag)
                 break;
             }
 
-#if CVTCOLOR
+#if 0
             cvtColor(frame, singleFrame, COLOR_BGR2GRAY);
 #else
             split(frame, frame3channels);
             singleFrame = 0.257 * frame3channels[2] + 0.564 * frame3channels[1] + 0.098 * frame3channels[0];
 #endif
-            meanStdDev(singleFrame, meanSF, stdDevSF);
+//            meanStdDev(singleFrame, meanSF, stdDevSF);
 
-            threshRate = meanSF.at<double>(0, 0) / stdDevSF.at<double>(0, 0) * meanSF.at<double>(0, 0) / 80 + 0.2;
-            if (threshRate > 0.6)
+            for(int i = 0;i<frame.rows;i++)
             {
-                threshRate = 0.6;
+                for(int j = 0;j<frame.cols;j++)
+                {
+                    minFrame.at<uchar>(i,j) = min(min(frame.at<Vec3b>(i,j)[0],frame.at<Vec3b>(i,j)[1]),frame.at<Vec3b>(i,j)[2]);
+                }
             }
-            cout << "threshRate*10: " << threshRate * 10 << endl;
-            selectedKernelMat = kernelMat[(unsigned int)(threshRate * 10)];
-            time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
-            cout << "   time while pre   =  " << time2 << "  ms" << endl;
 
-            time2 = (double)getTickCount();
+            meanStdDev(minFrame, meanSF, stdDevSF);
+//            threshRate = meanSF.at<double>(0, 0) / stdDevSF.at<double>(0, 0) * meanSF.at<double>(0, 0) / 2 + 0.2;
+            threshRate = sqrt(0.02/pow(stdDevSF.at<double>(0,0)/255,2));
+            printf("threshRate  %f\n",threshRate);
+            if (threshRate > 0.9)
+            {
+                threshRate = 0.3;
+            }          
+            //conv2D
+//            selectedKernelMat = kernelMat[(unsigned int)(threshRate * 10)];
+
             //singleFrame.convertTo(SFfp16, CV_16FC1);
-            //SFfp16out = Mat(SFfp16.size(), CV_16FC1); //已开辟内存，但是随机数，都是-23.0
+            //SFfp16out = Mat(SFfp16.size(), CV_16FC1);
             singleFrame.convertTo(SFfp32, CV_32FC1);
-            SFfp32out = Mat(SFfp32.size(), CV_32FC1); //已开辟内存，但是随机数，都是-23.0
+            SFfp32out = Mat(SFfp32.size(), CV_32FC1);
 
             time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
             cout << "   time creat SFfp32out convertTo SFfp32Frame   =  " << time2 << "  ms" << endl;
 
-            time2 = (double)getTickCount();
             /* laplacianFilter_GPU_wrapper(SFfp16, SFfp16out, selectedKernelMat);*/
             //convfp16((__half*)SFfp16.data, (__half*)SFfp16out.data, (__half*)selectedKernelMat.data, SFfp16.cols, SFfp16.rows); //.ptr() .data返回的都是一级指针（列指针）
 
             //timeCall = (double)getTickCount();
             //convolveDFT(SFfp32, selectedKernelMat, SFfp32out);
 
-            fftImgKernel((cufftReal*)SFfp32.data, (cufftReal*)SFfp32out.data, kernelComplex[(unsigned int)(threshRate * 10)], SFfp32.rows, SFfp32.cols);
+            fftImgKernel((cufftReal*)SFfp32.data, (cufftReal*)SFfp32out.data, kernelComplex[(unsigned int)(threshRate * 15)], SFfp32.rows, SFfp32.cols);
 
-            time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
-            cout << "   time convDFT   =  " << time2 << "  ms" << endl;
+//            time2 = (double)getTickCount();
+//            //SFfp32out.convertTo(SFfp32out, CV_8UC1);
+//            SFfp32out.convertTo(SFfp32out, CV_8UC1,1/((float)IMG_HEIGHT*(float)IMG_WIDTH)); //真是不懂到底要不要乘以255
+//            time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
+//            cout << "   time convertTo SFfp32out fp32->8u  =  " << time2 << "  ms" << endl;
 
-            time2 = (double)getTickCount();
-            //SFfp32out.convertTo(SFfp32out, CV_8UC1);
-            SFfp32out.convertTo(SFfp32out, CV_8UC1,1/((float)IMG_HEIGHT*(float)IMG_WIDTH)); //真是不懂到底要不要乘以255
-            time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
-            cout << "   time convertTo SFfp32out fp32->8u  =  " << time2 << "  ms" << endl;
-
-            time2 = (double)getTickCount();
             Scalar meanSFfp32out = mean(SFfp32out);
-            SFfp32out = SFfp32out / meanSFfp32out[0] * meanSF.at<double>(0, 0) / 1;
-            time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
-            cout << "   time mean of SF32fp32out  =  " << time2 << "  ms" << endl;
+            SFfp32out = SFfp32out / meanSFfp32out[0] * meanSF.at<double>(0, 0) / 1.0;
+            SFfp32out.convertTo(SFfp32out, CV_8UC1);
 
-            time2 = (double)getTickCount();
             cvtColor(frame, frameYUV, COLOR_BGR2YCrCb);
             split(frameYUV, frame3YUV);
             frame3YUV[0] = SFfp32out;
             merge(frame3YUV, frameYUV);
             cvtColor(frameYUV, *outFrame, COLOR_YCrCb2BGR);
-            time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
-            cout << "   time cvtColor yuv  =  " << time2 << "  ms" << endl;
 
-            time2 = (double)getTickCount();
-            //        imshow("frame", frame);
-            //        imshow("outFrame", outFrame);
-            time2 = (double)(getTickCount() - time2) * 1000 / getTickFrequency();
-            cout << "   time imshow  =  " << time2 << "  ms" << endl;
+            LUT(*outFrame,lut_table,*outFrame);
 
+            imshow("frame", frame);
+            imshow("outFrame", *outFrame);
 
             double fps = getTickFrequency() / (getTickCount() - time);
             time = (double)(getTickCount() - time) * 1000 / getTickFrequency();
             cout << "  time total =  " << time << "  ms" << endl;
             cout << "fps" << fps << endl;
-            //        waitKey(1);
+            waitKey(1);
 
             ///
-//            *(bool*)flag = false;
+            *(bool*)flag = false;
 
-//        }  //end if
+        }  //end if
     }
 
 //    delete cap;
