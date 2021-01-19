@@ -20,7 +20,7 @@
 #include <cufft.h>  //要添加cufft.lib cufftw.lib库文件，否则报错无法解析cudafft错误
 
 
-#define BLOCK_SIZE      (8)
+#define BLOCK_SIZE      (32)
 #define FILTER_WIDTH    (15)
 #define FILTER_HEIGHT   (15)  //85 vs 2.2seconds  核越大黑色，边框越大
 
@@ -37,6 +37,8 @@ extern "C" void mainfft();
 extern "C" void fft1d();
 extern "C" void fft3d();
 extern  void fft2main();
+extern int testcudamulSpectrum();
+extern void cudaFFTmulSpectrum1119float();
 
 
 
