@@ -1,2 +1,2 @@
-# imgaeEnhancement
+# imageEnhancement
 default branch
